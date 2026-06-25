@@ -1,9 +1,7 @@
+import Dashboard from "./pages/Dashboard";
+
 function App() {
-  return (
-    <div>
-      Repository Visualizer
-    </div>
-  );
+  return <Dashboard />;
 }
 
 export default App;
