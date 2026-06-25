@@ -16,7 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import scan
 
-from app.api.routes import scan, graph
+from app.api.routes import scan, graph, summary
 
 app = FastAPI(
     title="Repository Visualizer API",
@@ -50,3 +50,4 @@ def root():
 # own router file and gets plugged in here.
 app.include_router(scan.router)
 app.include_router(graph.router)
+app.include_router(summary.router)
