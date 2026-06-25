@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { fetchGraph } from "../services/api";
 import GraphCanvas from "../components/GraphCanvas/GraphCanvas";
+import SidePanel from "../components/SidePanel/SidePanel";
 
-// For now, hardcode the repo path. Later we'll add an input box.
 const REPO_PATH = "C:/Users/91733/repository-visualizer";
 
 export default function Dashboard() {
   const [graph, setGraph] = useState(null);
   const [error, setError] = useState(null);
+  const [selectedNode, setSelectedNode] = useState(null);
 
   useEffect(() => {
     fetchGraph(REPO_PATH)
@@ -15,8 +16,22 @@ export default function Dashboard() {
       .catch((err) => setError(err.message));
   }, []);
 
+  // React Flow calls this with (event, node). We only need the node.
+  const handleNodeClick = (event, node) => {
+    setSelectedNode(node);
+  };
+
   if (error) return <div style={{ padding: 20 }}>Error: {error}</div>;
   if (!graph) return <div style={{ padding: 20 }}>Loading graph…</div>;
 
-  return <GraphCanvas nodes={graph.nodes} edges={graph.edges} />;
+  return (
+    <div style={{ position: "relative", width: "100%", height: "100vh" }}>
+      <GraphCanvas
+        nodes={graph.nodes}
+        edges={graph.edges}
+        onNodeClick={handleNodeClick}
+      />
+      <SidePanel node={selectedNode} onClose={() => setSelectedNode(null)} />
+    </div>
+  );
 }

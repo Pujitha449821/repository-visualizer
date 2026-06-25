@@ -60,7 +60,7 @@ function toFlowData(nodes, edges) {
   return { flowNodes, flowEdges };
 }
 
-export default function GraphCanvas({ nodes, edges }) {
+export default function GraphCanvas({ nodes, edges, onNodeClick }) {
   const { flowNodes, flowEdges } = useMemo(
     () => toFlowData(nodes, edges),
     [nodes, edges]
@@ -72,6 +72,7 @@ export default function GraphCanvas({ nodes, edges }) {
         nodes={flowNodes}
         edges={flowEdges}
         nodeTypes={nodeTypes}
+        onNodeClick={onNodeClick}
         fitView
       >
         <Background />
