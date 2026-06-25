@@ -7,8 +7,13 @@ from pathlib import Path
 from app.infra.ai_client import summarize_code
 
 # In-memory cache: { content_hash: summary_text }.
-# Lives only while the server runs — fine for now.
 _cache: dict[str, str] = {}
+
+# Size guards (in characters):
+# Files larger than HARD_LIMIT are skipped entirely (too big to summarize).
+# Files between SOFT_CAP and HARD_LIMIT are trimmed to SOFT_CAP before sending.
+SOFT_CAP = 12_000      # ~ a few hundred lines of code
+HARD_LIMIT = 100_000   # anything bigger is skipped
 
 
 def _hash_content(content: str) -> str:
@@ -27,21 +32,45 @@ def get_summary(root: str, file_id: str) -> dict:
     Returns:
         { "summary": str, "cached": bool }
     """
-    # Rebuild the absolute path to the file on disk.
     full_path = Path(root) / file_id
 
     if not full_path.is_file():
         raise FileNotFoundError(f"File not found: {full_path}")
 
-    # Read the file's text. errors="ignore" skips odd bytes safely.
     content = full_path.read_text(encoding="utf-8", errors="ignore")
 
-    # Check the cache first.
-    key = _hash_content(content)
+    # Guard 1: empty / unreadable files.
+    if not content.strip():
+        return {
+            "summary": "This file is empty or has no readable text content.",
+            "cached": False,
+        }
+
+    # Guard 2: truly huge files — skip the AI call entirely.
+    if len(content) > HARD_LIMIT:
+        return {
+            "summary": (
+                f"This file is too large to summarize "
+                f"({len(content):,} characters). Large generated files "
+                f"like notebooks or lock files are skipped to save resources."
+            ),
+            "cached": False,
+        }
+
+    # Guard 3: merely large files — trim to the soft cap before sending.
+    truncated = len(content) > SOFT_CAP
+    snippet = content[:SOFT_CAP] if truncated else content
+
+    # Cache key is based on the snippet actually sent (so trimming is consistent).
+    key = _hash_content(snippet)
     if key in _cache:
         return {"summary": _cache[key], "cached": True}
 
-    # Not cached -> call the AI, then store the result.
-    summary = summarize_code(full_path.name, content)
+    summary = summarize_code(full_path.name, snippet)
+
+    # If we trimmed, note that in the returned summary so it's honest.
+    if truncated:
+        summary += "\n\n(Note: summary based on the first part of a large file.)"
+
     _cache[key] = summary
     return {"summary": summary, "cached": False}
