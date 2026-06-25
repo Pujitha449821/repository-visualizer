@@ -22,13 +22,13 @@ function colorForLines(lines, maxLines) {
  * Map a line count to a pixel size, also on a log scale and clamped.
  */
 function sizeForLines(lines, maxLines) {
-  const MIN = 60;
-  const MAX = 140;
+  const MIN = 90;
+  const MAX = 170;
   const ratio = maxLines > 0 ? Math.log1p(lines) / Math.log1p(maxLines) : 0;
   return MIN + ratio * (MAX - MIN);
 }
 
-function toFlowData(nodes, edges) {
+function toFlowData(nodes, edges, selectedId) {
   const COLS = 6;
   const X_GAP = 220;
   const Y_GAP = 200;
@@ -49,21 +49,24 @@ function toFlowData(nodes, edges) {
       color: colorForLines(node.code_lines, maxLines),
       size: sizeForLines(node.code_lines, maxLines),
     },
+    selected: node.id === selectedId,
   }));
 
-  const flowEdges = edges.map((edge, i) => ({
+const flowEdges = edges.map((edge, i) => ({
     id: `e${i}-${edge.source}-${edge.target}`,
     source: edge.source,
     target: edge.target,
+    animated: true, // flowing dashes show import direction
+    style: { stroke: "#14b8a6", strokeWidth: 1.5 },
   }));
 
   return { flowNodes, flowEdges };
 }
 
-export default function GraphCanvas({ nodes, edges, onNodeClick }) {
+export default function GraphCanvas({ nodes, edges, onNodeClick, selectedId }) {
   const { flowNodes, flowEdges } = useMemo(
-    () => toFlowData(nodes, edges),
-    [nodes, edges]
+    () => toFlowData(nodes, edges, selectedId),
+    [nodes, edges, selectedId]
   );
 
   return (
@@ -75,9 +78,17 @@ export default function GraphCanvas({ nodes, edges, onNodeClick }) {
         onNodeClick={onNodeClick}
         fitView
       >
-        <Background />
-        <Controls />
-        <MiniMap />
+        <Background color="#21262d" gap={20} size={1} />
+        <Controls
+          style={{
+            button: { background: "#161b22" },
+          }}
+        />
+        <MiniMap
+          style={{ background: "#0d1117" }}
+          maskColor="rgba(13, 17, 23, 0.7)"
+          nodeColor={(n) => n.data?.color || "#14b8a6"}
+        />
       </ReactFlow>
     </div>
   );

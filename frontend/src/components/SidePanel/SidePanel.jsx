@@ -3,22 +3,15 @@ import { fetchSummary } from "../../services/api";
 
 /**
  * Shows details + AI summary for the currently selected file node.
- * Props:
- *   node    - the selected React Flow node (or null)
- *   repoPath - absolute path of the scanned repo (needed for the summary call)
- *   onClose - handler to close the panel
+ * Props: node, repoPath, onClose
  */
 export default function SidePanel({ node, repoPath, onClose }) {
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Re-fetch the summary whenever the selected node changes.
   useEffect(() => {
-    // No node selected -> nothing to do.
     if (!node) return;
-
-    // Reset state for the new file.
     setSummary(null);
     setError(null);
     setLoading(true);
@@ -39,54 +32,159 @@ export default function SidePanel({ node, repoPath, onClose }) {
         position: "absolute",
         top: 0,
         right: 0,
-        width: 320,
-        height: "100vh",
-        background: "#1e1e1e",
-        color: "#eee",
-        borderLeft: "1px solid #333",
-        padding: 20,
+        width: 360,
+        height: "100%",
+        background: "var(--bg-surface)",
+        color: "var(--text-primary)",
+        borderLeft: "1px solid var(--border)",
+        padding: 0,
         boxSizing: "border-box",
         overflowY: "auto",
         zIndex: 10,
+        boxShadow: "-8px 0 24px rgba(0,0,0,0.4)",
+        animation: "slideInRight 0.25s ease",
       }}
     >
-      <button
-        onClick={onClose}
+      {/* Header row with file color dot + close button */}
+      <div
         style={{
-          float: "right",
-          background: "transparent",
-          color: "#aaa",
-          border: "none",
-          fontSize: 20,
-          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "18px 20px",
+          borderBottom: "1px solid var(--border)",
         }}
       >
-        ×
-      </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, overflow: "hidden" }}>
+          <span
+            style={{
+              width: 12,
+              height: 12,
+              borderRadius: "50%",
+              background: d.color,
+              boxShadow: `0 0 8px ${d.color}`,
+              flexShrink: 0,
+            }}
+          />
+          <h2
+            style={{
+              margin: 0,
+              fontSize: 16,
+              fontWeight: 700,
+              wordBreak: "break-word",
+            }}
+          >
+            {d.label}
+          </h2>
+        </div>
 
-      <h2 style={{ marginTop: 0, wordBreak: "break-word" }}>{d.label}</h2>
-
-      <p style={{ opacity: 0.7, fontSize: 12, wordBreak: "break-all" }}>
-        {node.id}
-      </p>
-
-      <div style={{ marginTop: 16, lineHeight: 1.8 }}>
-        <div>Code lines: {d.codeLines}</div>
+        <button
+          onClick={onClose}
+          style={{
+            background: "transparent",
+            color: "var(--text-muted)",
+            border: "none",
+            fontSize: 22,
+            lineHeight: 1,
+            cursor: "pointer",
+            padding: 4,
+            borderRadius: 6,
+            transition: "color 0.2s ease, background 0.2s ease",
+            flexShrink: 0,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = "var(--text-primary)";
+            e.currentTarget.style.background = "var(--bg-elevated)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = "var(--text-muted)";
+            e.currentTarget.style.background = "transparent";
+          }}
+        >
+          ×
+        </button>
       </div>
 
-      {/* AI summary section */}
-      <div style={{ marginTop: 24 }}>
-        <h3 style={{ marginBottom: 8 }}>AI Summary</h3>
+      {/* Body */}
+      <div style={{ padding: 20 }}>
+        {/* File path */}
+        <div
+          style={{
+            fontSize: 12,
+            color: "var(--text-secondary)",
+            wordBreak: "break-all",
+            background: "var(--bg-base)",
+            padding: "8px 10px",
+            borderRadius: 6,
+            border: "1px solid var(--border)",
+            fontFamily: "monospace",
+          }}
+        >
+          {node.id}
+        </div>
 
-        {loading && <p style={{ opacity: 0.7 }}>Generating summary…</p>}
+        {/* Metric: code lines */}
+        <div
+          style={{
+            marginTop: 16,
+            display: "flex",
+            alignItems: "baseline",
+            gap: 8,
+          }}
+        >
+          <span style={{ fontSize: 28, fontWeight: 700, color: "var(--accent)" }}>
+            {d.codeLines}
+          </span>
+          <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>
+            lines of code
+          </span>
+        </div>
 
-        {error && (
-          <p style={{ color: "#ff8080" }}>Could not load summary: {error}</p>
-        )}
+        {/* AI summary section */}
+        <div style={{ marginTop: 28 }}>
+          <h3
+            style={{
+              margin: "0 0 12px",
+              fontSize: 13,
+              fontWeight: 600,
+              textTransform: "uppercase",
+              letterSpacing: "0.05em",
+              color: "var(--text-secondary)",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <span style={{ color: "var(--accent)" }}>✦</span> AI Summary
+          </h3>
 
-        {summary && !loading && (
-          <p style={{ lineHeight: 1.6 }}>{summary}</p>
-        )}
+          <div
+            style={{
+              background: "var(--bg-base)",
+              border: "1px solid var(--border)",
+              borderRadius: 10,
+              padding: 16,
+              fontSize: 14,
+              lineHeight: 1.6,
+              color: "var(--text-primary)",
+              minHeight: 60,
+            }}
+          >
+            {loading && (
+              <span style={{ color: "var(--text-muted)", animation: "pulse 1.4s ease infinite" }}>
+                Generating summary…
+              </span>
+            )}
+
+            {error && (
+              <span style={{ color: "var(--danger)" }}>
+                Could not load summary: {error}
+              </span>
+            )}
+
+            {summary && !loading && <span>{summary}</span>}
+          </div>
+        </div>
       </div>
     </div>
   );

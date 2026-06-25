@@ -49,6 +49,7 @@ export default function Dashboard() {
             nodes={graph.nodes}
             edges={graph.edges}
             onNodeClick={handleNodeClick}
+            selectedId={selectedNode?.id}
           />
         )}
 
