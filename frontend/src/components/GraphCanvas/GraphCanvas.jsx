@@ -67,7 +67,7 @@ export default function GraphCanvas({ nodes, edges, onNodeClick }) {
   );
 
   return (
-    <div style={{ width: "100%", height: "100vh" }}>
+    <div style={{ width: "100%", height: "100%" }}>
       <ReactFlow
         nodes={flowNodes}
         edges={flowEdges}
