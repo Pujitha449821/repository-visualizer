@@ -1,9 +1,34 @@
+import { useEffect, useState } from "react";
+import { fetchSummary } from "../../services/api";
+
 /**
- * Shows details for the currently selected file node.
- * Receives the selected node (or null) and a close handler from Dashboard.
+ * Shows details + AI summary for the currently selected file node.
+ * Props:
+ *   node    - the selected React Flow node (or null)
+ *   repoPath - absolute path of the scanned repo (needed for the summary call)
+ *   onClose - handler to close the panel
  */
-export default function SidePanel({ node, onClose }) {
-  // Nothing selected -> render nothing.
+export default function SidePanel({ node, repoPath, onClose }) {
+  const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Re-fetch the summary whenever the selected node changes.
+  useEffect(() => {
+    // No node selected -> nothing to do.
+    if (!node) return;
+
+    // Reset state for the new file.
+    setSummary(null);
+    setError(null);
+    setLoading(true);
+
+    fetchSummary(repoPath, node.id)
+      .then((result) => setSummary(result.summary))
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
+  }, [node, repoPath]);
+
   if (!node) return null;
 
   const d = node.data;
@@ -49,7 +74,20 @@ export default function SidePanel({ node, onClose }) {
         <div>Code lines: {d.codeLines}</div>
       </div>
 
-      {/* The AI summary will go here in a later step. */}
+      {/* AI summary section */}
+      <div style={{ marginTop: 24 }}>
+        <h3 style={{ marginBottom: 8 }}>AI Summary</h3>
+
+        {loading && <p style={{ opacity: 0.7 }}>Generating summary…</p>}
+
+        {error && (
+          <p style={{ color: "#ff8080" }}>Could not load summary: {error}</p>
+        )}
+
+        {summary && !loading && (
+          <p style={{ lineHeight: 1.6 }}>{summary}</p>
+        )}
+      </div>
     </div>
   );
 }

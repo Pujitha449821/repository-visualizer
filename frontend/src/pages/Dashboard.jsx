@@ -31,7 +31,11 @@ export default function Dashboard() {
         edges={graph.edges}
         onNodeClick={handleNodeClick}
       />
-      <SidePanel node={selectedNode} onClose={() => setSelectedNode(null)} />
+      <SidePanel
+  node={selectedNode}
+  repoPath={REPO_PATH}
+  onClose={() => setSelectedNode(null)}
+/>
     </div>
   );
 }

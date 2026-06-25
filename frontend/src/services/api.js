@@ -19,3 +19,24 @@ export async function fetchGraph(path) {
 
   return response.json();
 }
+
+/**
+ * Fetch an AI summary for a single file.
+ * @param {string} path - Absolute path of the scanned repo (same as fetchGraph).
+ * @param {string} fileId - The node id (repo-relative file path).
+ * @returns {Promise<{summary: string, cached: boolean}>}
+ */
+export async function fetchSummary(path, fileId) {
+  const url =
+    `${API_BASE}/summary` +
+    `?path=${encodeURIComponent(path)}` +
+    `&file_id=${encodeURIComponent(fileId)}`;
+
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(`Summary request failed: ${response.status} ${response.statusText}`);
+  }
+
+  return response.json();
+}
