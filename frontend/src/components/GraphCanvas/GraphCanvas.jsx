@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import ReactFlow, { Background, Controls, MiniMap } from "reactflow";
+import ReactFlow, { Background, Controls, MiniMap, Panel } from "reactflow";
 import "reactflow/dist/style.css";
 import FileNode from "./FileNode";
 
@@ -31,7 +31,7 @@ function sizeForLines(lines, maxLines) {
 function toFlowData(nodes, edges, selectedId) {
   const COLS = 6;
   const X_GAP = 220;
-  const Y_GAP = 200;
+  const Y_GAP = 160;
 
   // Find the biggest file so color/size are relative to THIS repo.
   const maxLines = Math.max(...nodes.map((n) => n.code_lines), 1);
@@ -47,23 +47,38 @@ function toFlowData(nodes, edges, selectedId) {
       label: node.name,
       codeLines: node.code_lines,
       color: colorForLines(node.code_lines, maxLines),
-      size: sizeForLines(node.code_lines, maxLines),
     },
     selected: node.id === selectedId,
+
   }));
 
-const flowEdges = edges.map((edge, i) => ({
-    id: `e${i}-${edge.source}-${edge.target}`,
-    source: edge.source,
-    target: edge.target,
-    animated: true, // flowing dashes show import direction
-    style: { stroke: "#14b8a6", strokeWidth: 1.5 },
-  }));
+const flowEdges = edges.map((edge, i) => {
+    // Is this edge connected to the currently selected node?
+    const isConnected =
+      selectedId &&
+      (edge.source === selectedId || edge.target === selectedId);
+
+    // Is *some* node selected (so we should dim the unconnected edges)?
+    const somethingSelected = Boolean(selectedId);
+
+    return {
+      id: `e${i}-${edge.source}-${edge.target}`,
+      source: edge.source,
+      target: edge.target,
+      animated: isConnected || !somethingSelected, // animate connected/all
+      style: {
+        // Connected edges: bright & bold. Others: dim (when something's selected).
+        stroke: isConnected ? "#60a5fa" : "#3b82f6",
+        strokeWidth: isConnected ? 2.5 : 1.5,
+        opacity: somethingSelected && !isConnected ? 0.15 : 1,
+      },
+    };
+  });
 
   return { flowNodes, flowEdges };
 }
 
-export default function GraphCanvas({ nodes, edges, onNodeClick, selectedId }) {
+export default function GraphCanvas({ nodes, edges, onNodeClick, selectedId, fileCount, depCount }) {
   const { flowNodes, flowEdges } = useMemo(
     () => toFlowData(nodes, edges, selectedId),
     [nodes, edges, selectedId]
@@ -76,18 +91,97 @@ export default function GraphCanvas({ nodes, edges, onNodeClick, selectedId }) {
         edges={flowEdges}
         nodeTypes={nodeTypes}
         onNodeClick={onNodeClick}
+        proOptions={{ hideAttribution: true }}
         fitView
       >
         <Background color="#21262d" gap={20} size={1} />
+
+        <Panel position="top-left">
+          <div style={{ position: "relative" }}>
+            {/* Blue glowing backing layer */}
+            <div
+              style={{
+                position: "absolute",
+                inset: -2,
+                background: "#3b82f6",
+                borderRadius: 12,
+                boxShadow: "0 0 12px rgba(59,130,246,0.6)",
+                opacity: 0.9,
+              }}
+            />
+            {/* Dark box on top */}
+            <div
+              style={{
+                position: "relative",
+                zIndex: 1,
+                background: "#161b22",
+                borderRadius: 10,
+                padding: "12px 14px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 16,
+                  fontWeight: 600,
+                  color: "#9da7b3",
+                  marginBottom: 8,
+                }}
+              >
+                File size (lines of code)
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 13, color: "#9da7b3" }}>Fewer</span>
+                {/* The gradient bar mirrors the green->red node colors */}
+                <div
+                  style={{
+                    width: 140,
+                    height: 12,
+                    borderRadius: 5,
+                    background:
+                      "linear-gradient(to right, hsl(120,70%,65%), hsl(60,70%,65%), hsl(0,70%,65%))",
+                  }}
+                />
+                <span style={{ fontSize: 15, color: "#9da7b3" }}>More</span>
+              </div>
+              <div
+                style={{
+                  marginTop: 10,
+                  paddingTop: 10,
+                  borderTop: "1px solid #30363d",
+                  fontSize: 15,
+                  color: "#9da7b3",
+                }}
+              >
+                {fileCount} files · {depCount} dependencies
+              </div>
+            </div>
+          </div>
+        </Panel>
+
         <Controls
+          showInteractive={false}
           style={{
-            button: { background: "#161b22" },
+            display: "flex",
+            flexDirection: "column",
+            gap: 2,
+            background: "#161b22",
+            border: "1px solid #30363d",
+            borderRadius: 10,
+            overflow: "hidden",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
           }}
         />
         <MiniMap
-          style={{ background: "#0d1117" }}
+          pannable
+          zoomable
+          style={{
+            background: "#0d1117",
+            border: "1px solid #30363d",
+            borderRadius: 10,
+            overflow: "hidden",
+          }}
           maskColor="rgba(13, 17, 23, 0.7)"
-          nodeColor={(n) => n.data?.color || "#14b8a6"}
+          nodeColor={(n) => n.data?.color || "#3b82f6"}
         />
       </ReactFlow>
     </div>

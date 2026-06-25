@@ -18,9 +18,9 @@
 
   /* Accent — the app's signature color.
      Change THIS line to recolor the whole app. */
-  --accent: #14b8a6;        /* teal */
-  --accent-hover: #2dd4bf;  /* lighter teal for hovers */
-  --accent-glow: rgba(20, 184, 166, 0.4); /* for glows/shadows */
+  --accent: #3b82f6;        /* electric blue */
+  --accent-hover: #60a5fa;  /* lighter blue for hovers */
+  --accent-glow: rgba(59, 130, 246, 0.4); /* for glows/shadows */
 
   /* Status color for errors */
   --danger: #f85149;
@@ -79,4 +79,45 @@ body {
 @keyframes pulse {
   0%, 100% { opacity: 0.4; }
   50% { opacity: 0.9; }
+}
+
+/* Loading spinner */
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Theme React Flow zoom control buttons */
+.react-flow__controls-button {
+  background: #161b22 !important;
+  border-bottom: 1px solid #30363d !important;
+  color: #e6edf3 !important;
+  fill: #e6edf3 !important;
+}
+.react-flow__controls-button:hover {
+  background: #21262d !important;
+}
+.react-flow__controls-button svg {
+  fill: #e6edf3 !important;
+}
+
+/* Blue glowing frame for the zoom controls and minimap */
+.react-flow__controls {
+  border: 2px solid #3b82f6 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.6) !important;
+  overflow: hidden;
+}
+
+.react-flow__minimap {
+  border: 2px solid #3b82f6 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.6) !important;
 }
