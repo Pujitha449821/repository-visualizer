@@ -23,7 +23,7 @@ if not _API_KEY:
 _client = genai.Client(api_key=_API_KEY)
 
 # Flash models are fast and free-tier friendly — ideal for short summaries.
-_MODEL_NAME = "gemini-2.5-flash"
+_MODEL_NAME = "gemini-2.5-flash-lite"
 
 
 def summarize_code(filename: str, code: str) -> str:

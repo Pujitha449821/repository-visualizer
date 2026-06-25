@@ -25,6 +25,12 @@ def _is_rate_limit_error(err: Exception) -> bool:
     return "429" in text or "resource_exhausted" in text or "quota" in text
 
 
+def _is_temporary_error(err: Exception) -> bool:
+    """Detect a transient server error (503 overloaded / 500 internal)."""
+    text = str(err).lower()
+    return "503" in text or "unavailable" in text or "high demand" in text
+
+
 def get_summary(root: str, file_id: str) -> dict:
     """
     Return an AI summary for a file, using cache when possible.
@@ -60,18 +66,23 @@ def get_summary(root: str, file_id: str) -> dict:
     if key in _cache:
         return {"summary": _cache[key], "cached": True}
 
-    # Call the AI, retrying once on a rate limit (per-minute limits clear fast).
     summary = None
-    for attempt in range(2):
+    MAX_ATTEMPTS = 3
+    for attempt in range(MAX_ATTEMPTS):
         try:
             summary = summarize_code(full_path.name, snippet)
             break
         except Exception as err:
-            if _is_rate_limit_error(err) and attempt == 0:
-                time.sleep(3)  # brief pause, then one retry
+            retryable = _is_rate_limit_error(err) or _is_temporary_error(err)
+            is_last = attempt == MAX_ATTEMPTS - 1
+
+            # Retry transient errors with a short pause, unless it's the last try.
+            if retryable and not is_last:
+                time.sleep(3)
                 continue
+
+            # Out of retries on a rate limit -> friendly message.
             if _is_rate_limit_error(err):
-                # Still rate-limited after retry -> friendly message, not a crash.
                 return {
                     "summary": (
                         "The AI is receiving too many requests right now "
@@ -80,7 +91,19 @@ def get_summary(root: str, file_id: str) -> dict:
                     ),
                     "cached": False,
                 }
-            # Any other error -> re-raise so we still see real bugs.
+
+            # Out of retries on an overloaded model -> friendly message.
+            if _is_temporary_error(err):
+                return {
+                    "summary": (
+                        "The AI model is temporarily busy (high demand on "
+                        "Google's side). This usually clears in a moment — "
+                        "please click the file again shortly."
+                    ),
+                    "cached": False,
+                }
+
+            # Anything else is a real bug -> re-raise so we can see it.
             raise
 
     if truncated:
