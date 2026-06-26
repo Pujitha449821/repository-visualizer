@@ -190,17 +190,7 @@ export default function Dashboard() {
                 Check that the path is correct and points to a folder on this
                 machine, then try again.
               </p>
-              <p
-                style={{
-                  color: "var(--text-muted)",
-                  fontSize: 12,
-                  marginTop: 14,
-                  fontFamily: "monospace",
-                  wordBreak: "break-all",
-                }}
-              >
-                {error}
-              </p>
+              
             </div>
           </div>
         )}

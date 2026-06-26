@@ -78,6 +78,31 @@ def _extract_csv(full_path: Path) -> str:
         f"Sample rows:\n" + "\n".join(samples)
     )
 
+def _extract_json(full_path: Path) -> str:
+    """
+    For .json files: show the top-level structure (keys and value types)
+    rather than dumping the whole file, so the AI can describe its purpose.
+    """
+    raw = full_path.read_text(encoding="utf-8", errors="ignore")
+    data = json.loads(raw)
+
+    if isinstance(data, dict):
+        # Describe each top-level key and the type of its value.
+        lines = ["This is a JSON object with these top-level keys:"]
+        for key, value in data.items():
+            vtype = type(value).__name__  # e.g. 'str', 'list', 'dict', 'int'
+            lines.append(f"- {key} ({vtype})")
+        return "\n".join(lines)
+
+    if isinstance(data, list):
+        return (
+            f"This is a JSON array with {len(data)} items. "
+            f"First item type: {type(data[0]).__name__ if data else 'empty'}."
+        )
+
+    # A bare value (rare for a .json file)
+    return f"This JSON file contains a single {type(data).__name__} value."
+
 
 def _extract_content(full_path: Path) -> str:
     """
@@ -90,6 +115,8 @@ def _extract_content(full_path: Path) -> str:
         return _extract_notebook(full_path)
     if suffix == ".csv":
         return _extract_csv(full_path)
+    if suffix == ".json":
+        return _extract_json(full_path)
 
     # Default: read as plain text.
     return full_path.read_text(encoding="utf-8", errors="ignore")
