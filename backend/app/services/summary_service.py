@@ -1,8 +1,9 @@
 """
 Service layer: orchestrates file summarization with caching.
-Sits between the route (HTTP) and ai_client (the AI call).
+Reads each file type intelligently before sending to the AI.
 """
 import hashlib
+import json
 import time
 from pathlib import Path
 from app.infra.ai_client import summarize_code
@@ -20,15 +21,78 @@ def _hash_content(content: str) -> str:
 
 
 def _is_rate_limit_error(err: Exception) -> bool:
-    """Detect a Gemini 429 / quota error from its text."""
     text = str(err).lower()
     return "429" in text or "resource_exhausted" in text or "quota" in text
 
 
 def _is_temporary_error(err: Exception) -> bool:
-    """Detect a transient server error (503 overloaded / 500 internal)."""
     text = str(err).lower()
     return "503" in text or "unavailable" in text or "high demand" in text
+
+
+def _extract_notebook(full_path: Path) -> str:
+    """
+    For .ipynb files: pull out ONLY the code cells (skip outputs/images),
+    so the AI reads the actual logic, not the bloated output data.
+    """
+    raw = full_path.read_text(encoding="utf-8", errors="ignore")
+    nb = json.loads(raw)  # a notebook is JSON
+
+    code_pieces = []
+    for cell in nb.get("cells", []):
+        if cell.get("cell_type") == "code":
+            # 'source' is a list of strings (lines) or a single string.
+            src = cell.get("source", "")
+            if isinstance(src, list):
+                src = "".join(src)
+            if src.strip():
+                code_pieces.append(src)
+
+    if not code_pieces:
+        return ""  # notebook with no code cells
+
+    # Join all code cells with separators so the AI sees them as one program.
+    return "\n\n# --- next cell ---\n\n".join(code_pieces)
+
+
+def _extract_csv(full_path: Path) -> str:
+    """
+    For .csv files: read only the header row + a few sample rows,
+    so the AI describes what the dataset contains from its structure.
+    """
+    lines = []
+    with full_path.open("r", encoding="utf-8", errors="ignore") as f:
+        for i, line in enumerate(f):
+            lines.append(line.rstrip("\n"))
+            if i >= 5:  # header + 5 sample rows is plenty
+                break
+
+    if not lines:
+        return ""
+
+    header = lines[0]
+    samples = lines[1:]
+    return (
+        f"This is a CSV dataset.\n"
+        f"Column headers: {header}\n\n"
+        f"Sample rows:\n" + "\n".join(samples)
+    )
+
+
+def _extract_content(full_path: Path) -> str:
+    """
+    Choose how to read a file based on its type, returning the text
+    we'll send to the AI.
+    """
+    suffix = full_path.suffix.lower()
+
+    if suffix == ".ipynb":
+        return _extract_notebook(full_path)
+    if suffix == ".csv":
+        return _extract_csv(full_path)
+
+    # Default: read as plain text.
+    return full_path.read_text(encoding="utf-8", errors="ignore")
 
 
 def get_summary(root: str, file_id: str) -> dict:
@@ -41,7 +105,12 @@ def get_summary(root: str, file_id: str) -> dict:
     if not full_path.is_file():
         raise FileNotFoundError(f"File not found: {full_path}")
 
-    content = full_path.read_text(encoding="utf-8", errors="ignore")
+    # Read the file using the right strategy for its type.
+    try:
+        content = _extract_content(full_path)
+    except Exception:
+        # If parsing fails (e.g. malformed notebook), fall back to plain text.
+        content = full_path.read_text(encoding="utf-8", errors="ignore")
 
     if not content.strip():
         return {
@@ -49,12 +118,12 @@ def get_summary(root: str, file_id: str) -> dict:
             "cached": False,
         }
 
+    # Even after smart extraction, a file could still be enormous.
     if len(content) > HARD_LIMIT:
         return {
             "summary": (
-                f"This file is too large to summarize "
-                f"({len(content):,} characters). Large generated files "
-                f"like notebooks or lock files are skipped to save resources."
+                f"This file is too large to summarize even after extracting "
+                f"its key parts ({len(content):,} characters)."
             ),
             "cached": False,
         }
@@ -75,13 +144,9 @@ def get_summary(root: str, file_id: str) -> dict:
         except Exception as err:
             retryable = _is_rate_limit_error(err) or _is_temporary_error(err)
             is_last = attempt == MAX_ATTEMPTS - 1
-
-            # Retry transient errors with a short pause, unless it's the last try.
             if retryable and not is_last:
                 time.sleep(3)
                 continue
-
-            # Out of retries on a rate limit -> friendly message.
             if _is_rate_limit_error(err):
                 return {
                     "summary": (
@@ -91,8 +156,6 @@ def get_summary(root: str, file_id: str) -> dict:
                     ),
                     "cached": False,
                 }
-
-            # Out of retries on an overloaded model -> friendly message.
             if _is_temporary_error(err):
                 return {
                     "summary": (
@@ -102,8 +165,6 @@ def get_summary(root: str, file_id: str) -> dict:
                     ),
                     "cached": False,
                 }
-
-            # Anything else is a real bug -> re-raise so we can see it.
             raise
 
     if truncated:
