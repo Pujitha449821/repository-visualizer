@@ -220,6 +220,7 @@ export default function Dashboard() {
         <SidePanel
           node={selectedNode}
           repoPath={currentPath}
+          maxLines={graph ? Math.max(...graph.nodes.map((n) => n.code_lines), 1) : 1}
           onClose={() => setSelectedNode(null)}
         />
       </div>
