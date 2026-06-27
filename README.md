@@ -1,6 +1,8 @@
 # Repository Visualizer
 
-> Point it at any local repository and see its structure, file dependencies, and size metrics as an interactive graph — with AI-generated plain-English summaries for every file.
+> Analyze any local Git repository into an interactive dependency graph with AI-powered file explanations, file metrics, and visual architecture mapping. Repository Visualizer helps developers quickly understand unfamiliar codebases by displaying file relationships, highlighting large files, and generating plain-English summaries for individual files.
+
+
 
 ![Repository Visualizer graph view](docs/screenshots/graph-view.png)
 
@@ -19,6 +21,13 @@ Jumping into an unfamiliar codebase is hard: file explorers show you folders, bu
 - **Size guards** — oversized files are handled safely so a giant notebook or data file never overwhelms the AI request.
 - **Repo stats and legend** — a color legend and repository statistics panel give immediate context for what you're looking at.
 
+## Performance
+
+- Fast repository scanning through lightweight static analysis.
+- AI summaries are cached using SHA-256 content hashes, so unchanged files are summarized only once.
+- Smart content extraction reduces token usage for notebooks, CSVs, and JSON files.
+- Repository scanning and graph generation happen locally, keeping source code private.
+
 ## Tech Stack
 
 **Backend**
@@ -33,6 +42,18 @@ Jumping into an unfamiliar codebase is hard: file explorers show you folders, bu
 
 **AI**
 - Google Gemini (`gemini-2.5-flash-lite`) via the `google-genai` SDK
+
+## Supported Languages
+
+### Currently Supported
+
+- Python
+  - Dependency analysis using Python's built-in `ast` module.
+
+### Planned Support
+
+- JavaScript (ES Modules / CommonJS)
+- C/C++ (`#include` dependency analysis)
 
 ## Architecture
 
@@ -132,6 +153,10 @@ The app will be available at `http://localhost:5173`. Open that URL in your brow
 
 ![Welcome screen](docs/screenshots/welcome.png)
 
+### AI Summary Panel
+
+![AI Summary Panel](docs/screenshots/summary_panel.png)
+
 ## API Endpoints
 
 FastAPI auto-generates interactive documentation — once the backend is running, visit **`http://127.0.0.1:8000/docs`** to explore and test all endpoints live in your browser.
@@ -196,11 +221,20 @@ repository-visualizer/
 - **`gemini-2.5-flash-lite`.** Chosen for its generous free-tier quota, which suits an interactive tool that may summarize many files.
 - **Python-only parsing for now.** The tool reads Python `import` statements (using Python's built-in `ast` module) to map dependencies. The parser is built with a plug-in structure, so support for other languages like JavaScript or C++ can be added later without major changes.
 
+## Limitations
+
+- Dependency analysis currently supports Python source files only.
+- AI summaries require a valid Google Gemini API key and an internet connection.
+- Summary caching is stored in memory and is cleared when the backend restarts.
+- Very large repositories may take longer to scan depending on the number and size of files.
+
 ## Future Improvements
 
-- Persistent **SQLite cache** so summaries survive server restarts.
-- Support for **more languages** (JavaScript, C/C++) via the existing parser structure.
-- Complexity metrics beyond lines of code.
+- Persistent SQLite cache so AI summaries survive backend restarts.
+- Extend dependency analysis to JavaScript and C/C++ using the existing parser architecture.
+- Add advanced code metrics such as cyclomatic complexity and maintainability index.
+- Improve automatic graph layouts for very large repositories.
+- Add search and filtering capabilities for navigating large dependency graphs.
 
 ## Acknowledgements
 
