@@ -2,9 +2,9 @@
 
 > Analyze any local Git repository into an interactive dependency graph with AI-powered file explanations, file metrics, and visual architecture mapping. Repository Visualizer helps developers quickly understand unfamiliar codebases by displaying file relationships, highlighting large files, and generating plain-English summaries for individual files.
 
+## Demo
 
-
-![Repository Visualizer graph view](docs/screenshots/graph-view.png)
+![Repository Visualizer Demo](docs/demo.gif)
 
 ## Overview
 
@@ -152,6 +152,8 @@ The app will be available at `http://localhost:5173`. Open that URL in your brow
 5. Use the header to switch to a different repository at any time.
 
 ![Welcome screen](docs/screenshots/welcome.png)
+
+![Repository Visualizer graph view](docs/screenshots/graph-view.png)
 
 ### AI Summary Panel
 
